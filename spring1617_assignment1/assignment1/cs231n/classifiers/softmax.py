@@ -23,6 +23,20 @@ def softmax_loss_naive(W, X, y, reg):
   # Initialize the loss and gradient to zero.
   loss = 0.0
   dW = np.zeros_like(W)
+  num_training_examples = X.shape[0]
+  num_classes = W.shape[1]
+
+  for training_index in range(num_training_examples):
+    data_row = X[training_index]                  # f- 1 X D
+    scores = np.dot(data_row, W)                  # W- D X C, scores- 1 X C  - class scores
+    # scores -= np.max(scores)                    # normalize values by substracting max values from each value
+    correct_score = scores[y[training_index]]  # get score for correct class of this training example
+    overall_score_exp = 0                         # stores sum of probabilities for each class
+    for class_index in range(num_classes):
+      overall_score_exp += np.exp(scores[class_index])     # calculate score and add score for each example
+    loss += (-1 * np.log( np.exp(correct_score) / overall_score_exp ) )
+    # loss += -1 * correct_score + np.log(overall_score_exp)    # add to loss
+  loss += reg * np.sum(W * W)     # add regularization term to overall loss
 
   #############################################################################
   # TODO: Compute the softmax loss and its gradient using explicit loops.     #
@@ -34,7 +48,6 @@ def softmax_loss_naive(W, X, y, reg):
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
-
   return loss, dW
 
 
@@ -59,5 +72,9 @@ def softmax_loss_vectorized(W, X, y, reg):
   #                          END OF YOUR CODE                                 #
   #############################################################################
 
+  scores = np.dot(X, W)  # X * W , X - N X D, W - D X C , scores - N X C
+  correct_scores = scores[np.arange(len(scores)), y]   # y - N X 1, correct_scores - N X 1
+
+  loss += np.sum(-1 * np.log(np.exp(correct_scores)/np.sum(np.exp(scores), axis=1)))
   return loss, dW
 
