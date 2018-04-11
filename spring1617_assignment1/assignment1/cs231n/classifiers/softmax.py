@@ -2,6 +2,7 @@ import numpy as np
 from random import shuffle
 from past.builtins import xrange
 
+
 def softmax_loss_naive(W, X, y, reg):
   """
   Softmax loss function, naive implementation (with loops)
@@ -24,19 +25,34 @@ def softmax_loss_naive(W, X, y, reg):
   loss = 0.0
   dW = np.zeros_like(W)
   num_training_examples = X.shape[0]
+  num_features = X.shape[1]
   num_classes = W.shape[1]
 
   for training_index in range(num_training_examples):
     data_row = X[training_index]                  # f- 1 X D
     scores = np.dot(data_row, W)                  # W- D X C, scores- 1 X C  - class scores
-    # scores -= np.max(scores)                    # normalize values by substracting max values from each value
-    correct_score = scores[y[training_index]]  # get score for correct class of this training example
-    overall_score_exp = 0                         # stores sum of probabilities for each class
-    for class_index in range(num_classes):
-      overall_score_exp += np.exp(scores[class_index])     # calculate score and add score for each example
-    loss += (-1 * np.log( np.exp(correct_score) / overall_score_exp ) )
+    scores -= np.max(scores)                      # normalize values by substracting max values from each value
+    #correct_score = scores[y[training_index]]     # get score for correct class of this training example
+    #overall_score_exp = np.sum(np.exp(scores))    # stores sum of probabilities for each class
+    #for class_index in range(num_classes):
+    #  overall_score_exp += np.exp(scores[class_index])     # calculate score and add score for each example
+    probabilities =  np.exp(scores) / np.sum(np.exp(scores))
+    loss += (-1 * np.log(probabilities[y[training_index]])) # calculate loss by considering only probability of correct class
     # loss += -1 * correct_score + np.log(overall_score_exp)    # add to loss
   loss += reg * np.sum(W * W)     # add regularization term to overall loss
+
+  # to compute average loss, divide by no. of training examples
+  loss /= num_training_examples
+
+
+  for feature_index in range(num_features):
+    for class_index in range(num_classes):
+      if class_index == y[training_index]:
+        dW[feature_index, class_index] = S(feature_index)(1-S(class_index))
+      else:
+        dW[feature_index, class_index] = -S(class_index)S(feature_index)
+
+
 
   #############################################################################
   # TODO: Compute the softmax loss and its gradient using explicit loops.     #
