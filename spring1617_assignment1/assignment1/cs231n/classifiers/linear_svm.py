@@ -88,6 +88,7 @@ def svm_loss_vectorized(W, X, y, reg):
     # print("y[0] scores", np.matrix(y_i_scores).T[:1, :])
     # print(scores[:1, :] - np.matrix(y_i_scores).T[:1, :])
     margin = np.maximum(0, scores - np.matrix(y_i_scores).T + 1)    # calculate difference from all class scores with correct class scores
+    # print(margin.shape)
 
     # print("margin", margin[:1,:])
     # margin = np.maximum(0, scores - scores[y] + 1)
@@ -98,19 +99,14 @@ def svm_loss_vectorized(W, X, y, reg):
     loss += reg * np.sum(W * W)  # add regularization term
     loss /= num_train
 
-    # correct_class_score = scores[y]  # - 4000 X 1 - stores correct class score for each image
-    # margin = (scores + 1) - scores[y] # 4000 X 10
-    # margin[y] = 0
-    # for index in range(len(margin)):
-    #     for marginal_score_index in range(len(margin[index])):
-    #       if margin[index][marginal_score_index] > 0 :
-    #         loss += margin[index][marginal_score_index]
+    binary = margin
+    binary[margin > 0] = 1      # binarize matrix
 
-    # dW - 3073 X10, X - 500 X 3073
-    # temp - 500 X 10
-    # temp_dW = X.T * temp -  3073 X 10
-    temp = np.ones((X.shape[0], dW.shape[1]))  # 500 X 10
-    dW = np.dot(X.T, temp) # 500 X 3073
+    row_sum = np.sum(binary, axis=1)  # compute column wise sum of classes
+    # print("row sum shape", row_sum.shape)
+    binary[np.arange(num_train), y] -= row_sum.T    # assign row wise sum to each row
+    # print(binary[:5, :X.shape[1]])
+    dW = np.dot(X.T, binary)        # compute weight gradients
     dW += reg * W
     dW /= num_train
 
