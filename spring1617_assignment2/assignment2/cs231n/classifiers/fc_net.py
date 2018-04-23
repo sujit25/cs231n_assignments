@@ -47,7 +47,11 @@ class TwoLayerNet(object):
         # weights and biases using the keys 'W1' and 'b1' and second layer weights #
         # and biases using the keys 'W2' and 'b2'.                                 #
         ############################################################################
-        pass
+        self.params['W1'] = np.random.normal(0, weight_scale, (input_dim, hidden_dim))
+        self.params['W2'] = np.random.normal(0, weight_scale, (hidden_dim, num_classes))
+        self.params['b1'] = np.zeros(hidden_dim)
+        self.params['b2'] = np.zeros(num_classes)
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -77,7 +81,22 @@ class TwoLayerNet(object):
         # TODO: Implement the forward pass for the two-layer net, computing the    #
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
-        pass
+        # unroll parameters
+        W1 = self.params['W1']
+        W2 = self.params['W2']
+        b1 = self.params['b1']
+        b2 = self.params['b2']
+
+
+        N = X.shape[0]
+        # D = np.product(X.shape[1:])
+        # X = X.reshape((N, D))
+        hidden1 = np.maximum(0, np.dot(X, W1) + b1)  # X- N X D, W1- D X H, hidden1 - N X H
+        scores = np.dot(hidden1, W2) + b2            # scores - N X C
+        exp_scores = np.exp(scores)
+        probs = exp_scores / np.sum(exp_scores, axis=1, keepdims=True)
+
+
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################
@@ -85,8 +104,13 @@ class TwoLayerNet(object):
         # If y is None then we are in test mode so just return scores
         if y is None:
             return scores
-
         loss, grads = 0, {}
+
+        # compute loss
+        correct_class_losses = -np.log(probs[range(N), y])                     # get probabilities of correct classes and compute their losses
+        loss = np.sum(correct_class_losses) / N                                # compute mean loss
+        loss += self.reg * np.sum(pow(W1, 2)) + self.reg * np.sum(pow(W2, 2))  # L1 & L2 regularization
+
         ############################################################################
         # TODO: Implement the backward pass for the two-layer net. Store the loss  #
         # in the loss variable and gradients in the grads dictionary. Compute data #
@@ -97,7 +121,22 @@ class TwoLayerNet(object):
         # automated tests, make sure that your L2 regularization includes a factor #
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
-        pass
+
+
+        dscores = probs.copy()       # dL/dscores -
+        dscores[range(N), y] -= 1    # Si - del(i,j), dscores - N X C
+        dscores /= N
+
+        grads['W2'] = np.dot(hidden1.T, dscores)  # dscores- N X C, hidden1.T - H X N, W2 - H X C
+        grads['W2'] += self.reg * W2                   # adding regularization term, dW2 - H X C
+
+        dhidden1 = np.dot(dscores, W2.T)          # dscores- N X C, W2.T -C X H, dhidden- N X H
+        dhidden1[hidden1 < 0] = 0                 # applying relu
+        grads['W1'] = np.dot(X.T, dhidden1)       # X.T - D X N, dhidden - N X H, dW1- D X H
+        grads['W1'] += self.reg * W1
+
+        grads['b2'] = np.sum(dscores, axis=0, keepdims=False)  # compute row wise sum, dscores - N X C, db2 - 1 X C
+        grads['b1'] = np.sum(dhidden1, axis=0, keepdims=False)  # compute row wise sum, dhidden - N X H, db1 - 1 X H
         ############################################################################
         #                             END OF YOUR CODE                             #
         ############################################################################

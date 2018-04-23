@@ -114,7 +114,7 @@ class TwoLayerNet(object):
         # grads['W1'] should store the gradient on W1, and be a matrix of same size #
         #############################################################################
         dscores = probs.copy()                         # dL/dscores -
-        dscores[range(N), y] -= 1                  # Si - del(i,j), dscores - N X C
+        dscores[range(N), y] -= 1                  	   # Si - del(i,j), dscores - N X C
         dscores /= N
 
         grads['W2'] = np.dot(hidden1.T, dscores)       # dscores- N X C, hidden1.T - H X N, W2 - H X C
