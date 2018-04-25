@@ -253,7 +253,6 @@ class Solver(object):
 
         return acc
 
-
     def train(self):
         """
         Run optimization to train the model.

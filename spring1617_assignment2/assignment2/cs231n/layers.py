@@ -25,6 +25,7 @@ def affine_forward(x, w, b):
     # TODO: Implement the affine forward pass. Store the result in out. You   #
     # will need to reshape the input into rows.                               #
     ###########################################################################
+    #print("x's shape", x.shape)
     N = x.shape[0]
     D = np.prod(x.shape[1:])
     modified_x = np.reshape(x, (N,D))
@@ -56,10 +57,10 @@ def affine_backward(dout, cache):
     ###########################################################################
     # TODO: Implement the affine backward pass.                               #
     ###########################################################################
-    N = x.shape[0]
-    ds = x.shape[1:]
-    D = np.prod(x.shape[1:])
-    tempx = np.reshape(x, (N, D))
+    N = x.shape[0]                  # first dimension of shape of X
+    ds = x.shape[1:]                # remaning dimensions of shape of X
+    D = np.prod(x.shape[1:])        # product of remaning dims of X
+    tempx = np.reshape(x, (N, D))   # reshape X into N X D
 
     # dout - N X M, tempx - N X D, tempx.T - D X N, dw - D X M
     dw = np.dot(tempx.T, dout)
@@ -168,6 +169,9 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     running_var = bn_param.get('running_var', np.zeros(D, dtype=x.dtype))
 
     out, cache = None, None
+    sample_mean = None
+    sample_var = None
+
     if mode == 'train':
         #######################################################################
         # TODO: Implement the training-time forward pass for batch norm.      #
@@ -184,7 +188,11 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
-        pass
+        sample_mean = np.sum(x, axis=0) / len(x)
+        sample_var = ((x - sample_mean) ** 2) / len(x)
+        normalized_x = (x - sample_mean)/(pow(sample_var + eps, 2))
+        out = normalized_x * gamma + beta       #
+
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -195,7 +203,8 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        pass
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var  = momentum * running_var + (1 - momentum) * sample_var
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -300,7 +309,8 @@ def dropout_forward(x, dropout_param):
         # TODO: Implement training phase forward pass for inverted dropout.   #
         # Store the dropout mask in the mask variable.                        #
         #######################################################################
-        pass
+        mask = np.random.binomial(1,p, x.shape)
+        out = x * mask
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -308,7 +318,7 @@ def dropout_forward(x, dropout_param):
         #######################################################################
         # TODO: Implement the test phase forward pass for inverted dropout.   #
         #######################################################################
-        pass
+        out = x
         #######################################################################
         #                            END OF YOUR CODE                         #
         #######################################################################
