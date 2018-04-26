@@ -28,7 +28,7 @@ def affine_forward(x, w, b):
     #print("x's shape", x.shape)
     N = x.shape[0]
     D = np.prod(x.shape[1:])
-    modified_x = np.reshape(x, (N,D))
+    modified_x = np.reshape(x, (N, D))
     out = modified_x.dot(w) + b
     ###########################################################################
     #                             END OF YOUR CODE                            #
@@ -59,10 +59,10 @@ def affine_backward(dout, cache):
     ###########################################################################
     N = x.shape[0]                  # first dimension of shape of X
     ds = x.shape[1:]                # remaning dimensions of shape of X
-    D = np.prod(x.shape[1:])        # product of remaning dims of X
+    D = np.prod(ds)        # product of remaining dims of X
     tempx = np.reshape(x, (N, D))   # reshape X into N X D
 
-    # dout - N X M, tempx - N X D, tempx.T - D X N, dw - D X M
+    # tempx - N X D, tempx.T - D X N, dout - N X M, dw - D X M
     dw = np.dot(tempx.T, dout)
 
     # dout - N X M, w - D X M,
@@ -164,11 +164,15 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     eps = bn_param.get('eps', 1e-5)
     momentum = bn_param.get('momentum', 0.9)
 
-    N, D = x.shape
+    N = x.shape[0]
+    D = np.prod(x.shape[1:])
+    modified_x = np.reshape(x, (N, D))
+
+    N, D = modified_x.shape
     running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
     running_var = bn_param.get('running_var', np.zeros(D, dtype=x.dtype))
 
-    out, cache = None, None
+    out, cache = None, {}
     sample_mean = None
     sample_var = None
 
@@ -188,10 +192,29 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variance, storing your result in the running_mean and running_var   #
         # variables.                                                          #
         #######################################################################
-        sample_mean = np.sum(x, axis=0) / len(x)
-        sample_var = ((x - sample_mean) ** 2) / len(x)
-        normalized_x = (x - sample_mean)/(pow(sample_var + eps, 2))
-        out = normalized_x * gamma + beta       #
+        # normalized x
+        print("modified_x shape", modified_x.shape)
+
+        sample_mean = np.sum(modified_x, axis=0) / len(modified_x)
+        print("sample mean shape", sample_mean.shape)
+
+        sample_var = ((modified_x - sample_mean) ** 2) / len(modified_x)
+        print("sample variance shape", sample_var.shape)
+
+        normalized_x = (modified_x - sample_mean)/(pow(sample_var + eps, 0.5))
+        out = normalized_x * gamma + beta
+
+        # store values in cache
+        cache['sample_mean'] = sample_mean
+        cache['sample_var'] = sample_var
+        cache['normalized_x'] = normalized_x
+        cache['gamma'] = gamma
+        cache['beta'] = beta
+        cache['eps'] = eps
+
+        # calculation of running mean and variance
+        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
+        running_var = momentum * running_var + (1 - momentum) * sample_var
 
         #######################################################################
         #                           END OF YOUR CODE                          #
@@ -203,8 +226,9 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-        running_mean = momentum * running_mean + (1 - momentum) * sample_mean
-        running_var  = momentum * running_var + (1 - momentum) * sample_var
+
+        normalized_x = (modified_x - running_mean)/(pow(running_var + eps, 2))
+        out = normalized_x * gamma + beta
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################
@@ -240,7 +264,7 @@ def batchnorm_backward(dout, cache):
     # TODO: Implement the backward pass for batch normalization. Store the    #
     # results in the dx, dgamma, and dbeta variables.                         #
     ###########################################################################
-    pass
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -270,7 +294,20 @@ def batchnorm_backward_alt(dout, cache):
     # should be able to compute gradients with respect to the inputs in a     #
     # single statement; our implementation fits on a single 80-character line.#
     ###########################################################################
-    pass
+    sample_mean = cache['sample_mean']
+    sample_var = cache['sample_var']
+    normalized_x = cache['normalized_x']
+    gamma = cache['gamma']
+    beta = cache['beta']
+    eps = cache['eps']
+
+    dgamma = np.sum( dout * normalized_x, axis= 0)
+    dbeta = np.sum(dout, axis=0)
+    N = len(dout)
+    term1 = np.multiply(gamma, pow((sample_var + eps), -0.5)) / N
+    term2 = (N * dout) - dbeta - (dgamma * normalized_x)
+    dx = term1 * term2
+
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -285,7 +322,8 @@ def dropout_forward(x, dropout_param):
     Inputs:
     - x: Input data, of any shape
     - dropout_param: A dictionary with the following keys:
-      - p: Dropout parameter. We drop each neuron output with probability p.
+      - p: Dropout parameter. We drop each neuron output with 
+      probability p.
       - mode: 'test' or 'train'. If the mode is train, then perform dropout;
         if the mode is test, then just return the input.
       - seed: Seed for the random number generator. Passing seed makes this
@@ -345,7 +383,7 @@ def dropout_backward(dout, cache):
         #######################################################################
         # TODO: Implement training phase backward pass for inverted dropout   #
         #######################################################################
-        pass
+        dx = dout * mask
         #######################################################################
         #                          END OF YOUR CODE                           #
         #######################################################################

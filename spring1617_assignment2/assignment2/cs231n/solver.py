@@ -146,7 +146,6 @@ class Solver(object):
 
         self._reset()
 
-
     def _reset(self):
         """
         Set up some book-keeping variables for optimization. Don't call this
@@ -165,7 +164,6 @@ class Solver(object):
         for p in self.model.params:
             d = {k: v for k, v in self.optim_config.items()}
             self.optim_configs[p] = d
-
 
     def _step(self):
         """
@@ -190,7 +188,6 @@ class Solver(object):
             self.model.params[p] = next_w
             self.optim_configs[p] = next_config
 
-
     def _save_checkpoint(self):
         if self.checkpoint_name is None: return
         checkpoint = {
@@ -211,7 +208,6 @@ class Solver(object):
             print('Saving checkpoint to "%s"' % filename)
         with open(filename, 'wb') as f:
             pickle.dump(checkpoint, f)
-
 
     def check_accuracy(self, X, y, num_samples=None, batch_size=100):
         """
