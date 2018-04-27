@@ -348,7 +348,7 @@ class FullyConnectedNet(object):
         # BACK PROPAGATION
         # computation of gradient
         for layer_num in reversed(range(1, self.num_layers+1)):
-            #print("--- computing backward propagation for layer ", layer_num, "-----")
+            # print("--- computing backward propagation for layer ", layer_num, "-----")
             W_name = 'W' + str(layer_num)
             b_name = 'b' + str(layer_num)
             gamma_name = 'gamma' + str(layer_num)
@@ -374,7 +374,7 @@ class FullyConnectedNet(object):
                     layer_der, grads[beta_name], grads[gamma_name] = batchnorm_backward_alt(layer_der, self.batch_norms[batchnorm_name])
 
             # add regularization
-            grads[W_name] += 0.5 * self.reg * self.params[W_name]
+            grads[W_name] += self.reg * self.params[W_name]
 
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -385,21 +385,37 @@ class FullyConnectedNet(object):
         return loss, grads
 
 
-# if __name__ == "__main__":
-#     np.random.seed(231)
-#     N, D, H1, H2, C = 50, ,100, 100, 10
-#     X = np.random.randn(N, D)
-#     y = np.random.randint(C, size=(N,))
-#
-#     for reg in [0, 3.14]:
-#         print('Running check with reg = ', reg)
-#         model = FullyConnectedNet([H1, H2], input_dim=D, num_classes=C,
-#                                   reg=reg, weight_scale=5e-2, dtype=np.float64)
-#
-# #         loss, grads = model.loss(X, y)
-# #         print('Initial loss: ', loss)
-# #
-# #         # for name in sorted(grads):
-# #         #     f = lambda _: model.loss(X, y)[0]
-# #         #     grad_num = eval_numerical_gradient(f, model.params[name], verbose=False, h=1e-5)
-# #         #     print('%s relative error: %.2e' % (name, rel_error(grad_num, grads[name])))
+if __name__ == "__main__":
+    from cs231n.data_utils import get_CIFAR10_data
+    from cs231n.solver import Solver
+
+    data = get_CIFAR10_data()
+    num_train = 50
+    small_data = {
+        'X_train': data['X_train'][:num_train],
+        'y_train': data['y_train'][:num_train],
+        'X_val': data['X_val'],
+        'y_val': data['y_val'],
+    }
+
+    weight_scale = 1e-2
+    learning_rate = 1e-4
+    model = FullyConnectedNet([100, 100],
+                              weight_scale=weight_scale, dtype=np.float64, use_batchnorm=True)
+
+    print(small_data['X_train'].shape)
+    print(small_data['y_train'].shape)
+    print(small_data['X_val'].shape)
+    print(small_data['y_val'].shape)
+
+    # for k in model.params.keys():
+    #     print(k, model.params[k].shape)
+
+    solver = Solver(model, small_data,
+                    print_every=10, num_epochs=20, batch_size=25,
+                    update_rule='sgd',
+                    optim_config={
+                        'learning_rate': learning_rate,
+                    }
+                    )
+    solver.train()

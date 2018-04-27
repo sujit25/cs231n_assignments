@@ -91,7 +91,8 @@ def relu_forward(x):
     # TODO: Implement the ReLU forward pass.                                  #
     ###########################################################################
     out = x
-    out[ out < 0] = 0
+    # out[ out < 0] = 0
+    out =out * (out >0)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -116,6 +117,7 @@ def relu_backward(dout, cache):
     ###########################################################################
     dx = np.array(dout, copy=True)
     dx[x < 0] = 0
+    #dx = dout * (x >=0)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -171,6 +173,10 @@ def batchnorm_forward(x, gamma, beta, bn_param):
     N, D = modified_x.shape
     running_mean = bn_param.get('running_mean', np.zeros(D, dtype=x.dtype))
     running_var = bn_param.get('running_var', np.zeros(D, dtype=x.dtype))
+    # print("----running means and variance before")
+    # print("running var", running_var.shape)
+    # print("running mean", running_mean.shape)
+    # print("modified x shape", modified_x.shape)
 
     out, cache = None, {}
     sample_mean = None
@@ -193,15 +199,15 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # variables.                                                          #
         #######################################################################
         # normalized x
-        print("modified_x shape", modified_x.shape)
+        # print("modified_x shape", modified_x.shape)
 
         sample_mean = np.sum(modified_x, axis=0) / len(modified_x)
-        print("sample mean shape", sample_mean.shape)
+        # print("sample mean shape", sample_mean.shape)
 
         sample_var = ((modified_x - sample_mean) ** 2) / len(modified_x)
-        print("sample variance shape", sample_var.shape)
+        # print("sample variance shape", sample_var.shape)
 
-        normalized_x = (modified_x - sample_mean)/(pow(sample_var + eps, 0.5))
+        normalized_x = (modified_x - sample_mean)/np.sqrt(sample_var + eps)
         out = normalized_x * gamma + beta
 
         # store values in cache
@@ -216,6 +222,11 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         running_mean = momentum * running_mean + (1 - momentum) * sample_mean
         running_var = momentum * running_var + (1 - momentum) * sample_var
 
+        # print("----running means and variance after")
+        # print("running var", running_var.shape)
+        # print("running mean", running_mean.shape)
+        # print("modified x shape", modified_x.shape)
+
         #######################################################################
         #                           END OF YOUR CODE                          #
         #######################################################################
@@ -226,8 +237,13 @@ def batchnorm_forward(x, gamma, beta, bn_param):
         # then scale and shift the normalized data using gamma and beta.      #
         # Store the result in the out variable.                               #
         #######################################################################
-
-        normalized_x = (modified_x - running_mean)/(pow(running_var + eps, 2))
+        # running_mean = bn_param['running_mean']
+        # running_var =  bn_param['running_var']
+        # print(" ---- test mode running means and variance initially before")
+        # print("running var", running_var.shape)
+        # print("running mean", running_mean.shape)
+        # print("modified x shape", modified_x.shape)
+        normalized_x = (modified_x - running_mean)/np.sqrt(running_var + eps)
         out = normalized_x * gamma + beta
         #######################################################################
         #                          END OF YOUR CODE                           #
@@ -347,7 +363,7 @@ def dropout_forward(x, dropout_param):
         # TODO: Implement training phase forward pass for inverted dropout.   #
         # Store the dropout mask in the mask variable.                        #
         #######################################################################
-        mask = np.random.binomial(1,p, x.shape)
+        mask = np.random.binomial(1, p, x.shape)
         out = x * mask
         #######################################################################
         #                           END OF YOUR CODE                          #

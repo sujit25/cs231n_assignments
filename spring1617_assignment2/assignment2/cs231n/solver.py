@@ -256,7 +256,11 @@ class Solver(object):
         num_train = self.X_train.shape[0]
         iterations_per_epoch = max(num_train // self.batch_size, 1)
         num_iterations = self.num_epochs * iterations_per_epoch
-
+        # print("num train", num_train)
+        # print("num iterations per epoch", iterations_per_epoch)
+        # print("num iterations", num_iterations)
+        # print("X train shape", self.X_train.shape)
+        # print("y train shape", self.y_train.shape)
         for t in range(num_iterations):
             self._step()
 
