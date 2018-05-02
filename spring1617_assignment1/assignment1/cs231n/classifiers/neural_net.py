@@ -121,7 +121,7 @@ class TwoLayerNet(object):
         grads['W2'] += reg * W2                        # adding regularization term, dW2 - H X C
 
         dhidden1 = np.dot(dscores, W2.T)               # dscores- N X C, W2.T -C X H, dhidden- N X H
-        dhidden1[hidden1<0] = 0                        # applying relu
+        dhidden1[hidden1< 0] = 0                        # applying relu
         grads['W1'] = np.dot(X.T, dhidden1)            # X.T - D X N, dhidden - N X H, dW1- D X H
         grads['W1'] += reg * W1
 

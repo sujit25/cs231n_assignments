@@ -124,10 +124,6 @@ class TwoLayerNet(object):
         grads['W2'] += self.reg * W2
         grads['W1'] += self.reg * W1
 
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
-
         return loss, grads
 
 
@@ -193,23 +189,18 @@ class FullyConnectedNet(object):
         # parameters should be initialized to zero.                                #
         ############################################################################
 
-        for i in range(self.num_layers):
-            W_name = 'W' + str(i+1)
-            b_name = 'b' + str(i+1)
-            gamma_name = 'gamma' + str(i+1)
-            beta_name = 'beta' + str(i+1)
+        for i in range(1, self.num_layers+1):
+            W_name = 'W' + str(i)
+            b_name = 'b' + str(i)
+            gamma_name = 'gamma' + str(i)
+            beta_name = 'beta' + str(i)
 
-            self.params[W_name] = np.random.normal(scale=weight_scale, size=(dimensions[i], dimensions[i+1]))
-            self.params[b_name] = np.zeros((1, dimensions[i+1]))
+            self.params[W_name] = np.random.normal(scale=weight_scale, size=(dimensions[i-1], dimensions[i]))
+            self.params[b_name] = np.zeros((1, dimensions[i]))
 
-            if self.use_batchnorm and i != self.num_layers -1:
+            if self.use_batchnorm and i != self.num_layers:
                 self.params[gamma_name] = np.ones(dimensions[i])
                 self.params[beta_name] = np.zeros(dimensions[i])
-
-
-        ############################################################################
-        #                             END OF YOUR CODE                             #
-        ############################################################################
 
         # When using dropout we need to pass a dropout_param dictionary to each
         # dropout layer so that the layer knows the dropout probability and the mode
@@ -251,6 +242,7 @@ class FullyConnectedNet(object):
                 bn_param['mode'] = mode
 
         scores = None
+
         ############################################################################
         # TODO: Implement the forward pass for the fully-connected net, computing  #
         # the class scores for X and storing them in the scores variable.          #
@@ -265,18 +257,12 @@ class FullyConnectedNet(object):
         ############################################################################
         scores = np.array(X, copy=True)
         reg_loss = 0
-        cache = None
-        # hidden_scores = None
-        # normalized_hidden_score = None
-        # activated_normalized_hidden_score = None
-        # dropped_out_hidden_score =None
-        # intermediate_score = None
-        # layer_cache = None
-
         self.cache= {}
         self.batch_norms = {}
         self.dropouts = {}
         scores = X
+
+        # Forward Propagation
         for i in range(1, self.num_layers+1):
             # print("----- computing forward propagation layer {}".format(str(i)))
             # print("X shape", X.shape)
@@ -291,23 +277,22 @@ class FullyConnectedNet(object):
             weight = self.params[W_name]
             bias = self.params[b_name]
 
-            # last layer
             if i == self.num_layers:
                 # affine forward without relu
                 scores, self.cache[cache_name] = affine_forward(scores, weight, bias)
             else:
+                # affine relu forward
+                scores, self.cache[cache_name] = affine_relu_forward(scores, weight, bias)
+
                 # batch normalize previous input
                 # print("scores shape", scores.shape)
                 if self.use_batchnorm:
                     scores, self.batch_norms[batchnorm_name] = batchnorm_forward(scores,
-                                                                                self.params[gamma_name],
-                                                                                self.params[beta_name],
-                                                                                self.bn_params[i-1])
-                # affine relu forward
-                scores, self.cache[cache_name] = affine_relu_forward(scores, weight, bias)
-
+                                                                                 self.params[gamma_name],
+                                                                                 self.params[beta_name],
+                                                                                 self.bn_params[i - 1])
                 # add reg loss
-                reg_loss += self.reg * np.sum(weight ** 2)
+                reg_loss += self.reg * np.sum(weight * weight)
 
                 # dropout
                 if self.use_dropout:
@@ -357,21 +342,18 @@ class FullyConnectedNet(object):
             batchnorm_name = 'batchnorm' + str(layer_num)
             dropout_name = 'dropout' + str(layer_num)
 
-            # print("current layer: ", layer_num)
-
             # back prop for last layer
             if layer_num == self.num_layers:
                 layer_der, grads[W_name], grads[b_name] = affine_backward(dscores, self.cache[cache_name])
-                # print("dout shape", layer_der.shape, "d" + W_name + " shape", grads[W_name].shape, "d" + b_name + " shape", grads[b_name].shape)
+
             else:
                 if self.use_dropout:
-                    layer_der = dropout_backward(layer_der, self.dropouts)
+                    layer_der = dropout_backward(layer_der, self.dropouts[dropout_name])
+
+                if self.use_batchnorm:
+                    layer_der, grads[gamma_name], grads[beta_name] = batchnorm_backward_alt(layer_der, self.batch_norms[batchnorm_name])
 
                 layer_der, grads[W_name], grads[b_name] = affine_relu_backward(layer_der, self.cache[cache_name])
-                # print("dout shape", layer_der.shape, "d" + W_name + " shape", grads[W_name].shape,
-                #      "d" + b_name + " shape", grads[b_name].shape)
-                if self.use_batchnorm:
-                    layer_der, grads[beta_name], grads[gamma_name] = batchnorm_backward_alt(layer_der, self.batch_norms[batchnorm_name])
 
             # add regularization
             grads[W_name] += self.reg * self.params[W_name]
@@ -384,38 +366,3 @@ class FullyConnectedNet(object):
         #     print(k)
         return loss, grads
 
-
-if __name__ == "__main__":
-    from cs231n.data_utils import get_CIFAR10_data
-    from cs231n.solver import Solver
-
-    data = get_CIFAR10_data()
-    num_train = 50
-    small_data = {
-        'X_train': data['X_train'][:num_train],
-        'y_train': data['y_train'][:num_train],
-        'X_val': data['X_val'],
-        'y_val': data['y_val'],
-    }
-
-    weight_scale = 1e-2
-    learning_rate = 1e-4
-    model = FullyConnectedNet([100, 100],
-                              weight_scale=weight_scale, dtype=np.float64, use_batchnorm=True)
-
-    print(small_data['X_train'].shape)
-    print(small_data['y_train'].shape)
-    print(small_data['X_val'].shape)
-    print(small_data['y_val'].shape)
-
-    # for k in model.params.keys():
-    #     print(k, model.params[k].shape)
-
-    solver = Solver(model, small_data,
-                    print_every=10, num_epochs=20, batch_size=25,
-                    update_rule='sgd',
-                    optim_config={
-                        'learning_rate': learning_rate,
-                    }
-                    )
-    solver.train()
