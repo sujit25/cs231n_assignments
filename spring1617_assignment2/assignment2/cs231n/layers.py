@@ -424,12 +424,70 @@ def conv_forward_naive(x, w, b, conv_param):
       W' = 1 + (W + 2 * pad - WW) / stride
     - cache: (x, w, b, conv_param)
     """
-    out = None
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+
+    # N - no. of previous layer activations
+    # C - no. of channels in previous layer activation
+    # H - height of prev. activation
+    # W - width of prev. activation
+    # HH - filter size
+    # WW - filter width
+    # F - no. of filters
+    # H_hat - size of activation map created
+    # W_hat - size of activation map created
+
+    # output volume shape - N, H
+    N, C, H, W = x.shape
+    F, C, HH, WW = w.shape
+
+    H_hat = int( 1 + (H + 2* pad - HH)/stride)
+    W_hat = int( 1 + (W + 2* pad - WW)/stride)
+
+    # initialize target activation map
+    out = np.zeros((N, F, H_hat, W_hat))
+
     ###########################################################################
     # TODO: Implement the convolutional forward pass.                         #
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
-    pass
+
+    # perform zero padding over 2nd and 3rd dimensions of prev. layer activation map
+    x_pad = np.pad(x, ((0, 0), (0, 0), (pad, pad), (pad, pad)), 'constant')
+
+    # iterate over all the input images
+    for i in range(N):
+        # get ith image
+        a_prev_pad = x_pad[i, :, :, :]
+
+        # iterate over columns of target activation map
+        for h_index in range(H_hat):
+            h_stride = h_index * stride
+
+            # define vertical points of 3D slice
+            vert_start = h_stride
+            vert_end = h_stride + HH
+
+            # iterate over rows of target activation map
+            for w_index in range(W_hat):
+                w_stride = w_index * stride
+
+                # define horizontal points of 3D slice
+                horiz_start = w_stride
+                horiz_end = w_stride + WW
+
+                # extract a 3D slice of same shape of filter from prev. activation
+                a_slice_prev = a_prev_pad[:, vert_start:vert_end, horiz_start:horiz_end]
+
+                # iterate over filters
+                for filter_index in range(F):
+
+                    # get current filter to be applied
+                    curr_filter = w[filter_index, :, :, :]
+                    bias = b[filter_index]
+                    z = np.sum(np.multiply(a_slice_prev, curr_filter))
+                    z = z + float(bias)
+                    out[i, filter_index, h_index, w_index] = z
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -476,11 +534,49 @@ def max_pool_forward_naive(x, pool_param):
     - out: Output data
     - cache: (x, pool_param)
     """
-    out = None
+    # N - no. of prev. layer activations
+    # C - no. of channels per activation
+    # H - height of activation
+    # W - width of activation
+    # pool_height - height of pool filter
+    # pool_width - width of pool filter
+    # stride - length by which filter shifts over prev. activation
+    N, C, H, W = x.shape
+    HH = pool_param['pool_height']
+    WW = pool_param['pool_width']
+    stride = pool_param['stride']
+
+    # since zero padding, hence P=0
+    # during max-pool depth remains same, so C_prev = C_current
+    H_hat = int(1 + ((H - HH)/stride))
+    W_hat = int(1 + ((W - WW)/stride))
+
+    out = np.zeros((N, C, H_hat, W_hat))
+
     ###########################################################################
     # TODO: Implement the max pooling forward pass                            #
     ###########################################################################
-    pass
+    # iterate over previous activations
+    for i in range(N):
+        # get a block of shape (C, H, W)
+        a_prev = x[i, :, :, :]
+
+        # iterate over height of target activation map
+        for h_index in range(H_hat):
+            h_stride = h_index * stride
+            vert_start = h_stride
+            vert_end = h_stride + HH
+
+            # iterate over width of target activation map
+            for w_index in range(W_hat):
+                w_stride = w_index * stride
+                horiz_start = w_stride
+                horiz_end = w_stride + WW
+
+                # iterate over no. of channels
+                for c in range(C):
+                    a_prev_slice_channel = a_prev[c, vert_start:vert_end, horiz_start:horiz_end]
+                    out[i, c, h_index, w_index] = np.max(a_prev_slice_channel)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
